@@ -1,4 +1,5 @@
 function DoseCalculationApp_AZ
+
 % Create figure
 hFig = figure('Position',[200 20 1000 800],'MenuBar','none');
 
@@ -16,6 +17,14 @@ hAxes3 = axes('Parent',hFig,'Units','normalized','Position',[0.05 0.05 0.22 0.4]
 title(hAxes3,'Histogram');
 
 hTextBox = uicontrol('Style','text','FontSize',12,'Units','normalized','Position',[0.3 0.05 0.65 0.4],...
+                  'HorizontalAlignment','left');
+
+% Create second text box for RE
+hTextBox2 = uicontrol('Style','text','FontSize',12,'Units','normalized','Position',[0.3 0.01 0.65 0.03],...
+                  'HorizontalAlignment','left');
+
+% Create third text box for Beam Profile
+hTextBox3 = uicontrol('Style','text','FontSize',12,'Units','normalized','Position',[0.3 0.2 0.65 0.1],...
                   'HorizontalAlignment','left');
 
 % Create load image button
@@ -36,9 +45,28 @@ hCalcAndDisp = uicontrol('Style','pushbutton','String','Calculate & Display','Un
 % Create save dose map button
 hSaveDoseMap = uicontrol('Style','pushbutton','String','Save Dose Map','Units','normalized','Position',[.49 .95 .1 .03],...
                   'Callback',@saveDoseMapCallback);
-                  
+
+% Create input energy button
+hInputEnergy = uicontrol('Style','pushbutton','String','Input Energy & Air Gap','Units','normalized','Position',[.60 .95 .1 .03],...
+                  'Callback',@inputEnergyCallback);
+
+% Create new apply RE button
+hApplyRE = uicontrol('Style','pushbutton','String','Apply RE','Units','normalized','Position',[0.3 0.15 0.05 0.03],...
+                  'Callback',@applyRECallback);
+
+% Create film type button
+hFilmType = uicontrol('Style','popupmenu','String',{'EBT3','EBT-XD'},'Units','normalized','Position',[.71 .95 .1 .03]);
+
+% Create axes and titles
+hAxes4 = axes('Parent',hFig,'Units','normalized','Position',[0.52 0.05 0.45 0.4]);
+title(hAxes4,'Line Profile');
+
+% Create line profile button
+hLineProfile = uicontrol('Style','pushbutton','String','Draw & Plot Line Profile','Units','normalized','Position',[.82 .95 .15 .03],...
+                  'Callback',@lineProfileCallback);
+
 % Define global variables
-global imPath I I0 D dD maxBits
+global imPath I I0 D dD maxBits E0 z filmType RE D_subregion
 
 imPath = '';
 I = [];
@@ -46,6 +74,11 @@ I0 = [];
 D = [];
 dD = [];
 maxBits = [];
+E0 = [];
+z = [];
+filmType = 1; % Default film type to EBT3
+RE = []; 
+D_subregion = []; 
 
 % Callback functions
     function loadImageCallback(~,~)
@@ -63,16 +96,94 @@ maxBits = [];
         if isempty(I)
             return;
         end
-        I = imcrop(I);
+        % Get current figure handle
+        figureHandle = gcf;
+        % Set current axes to hAxes1
+        axes(hAxes1);
+        % Now call imcrop
+        I = imcrop;
         imshow(I, 'Parent', hAxes1);
+        % Restore previous current figure
+        figure(figureHandle);
     end
 
+    function lineProfileCallback(~,~)
+        if isempty(D)
+            return;
+        end
+        axes(hAxes1)
+        h = imline(gca);
+        pos = getPosition(h);
+        c = improfile(D, pos(:,1), pos(:,2));
+        plot(hAxes4, c);
+        title(hAxes4, 'Line Profile');
+        xlabel(hAxes4, 'Position');
+        ylabel(hAxes4, 'Dose [Gy]');
+  
+        figure;
+%         l = sqrt((pos(2,2)-pos(1,2))^2+(pos(2,1)-pos(1,1))^2);
+%         xx = [-l/2 l/2];
+        plot(c);
+        title('Line Profile');
+        xlabel('Position');
+        ylabel('Dose [Gy]');
+        grid on;
+
+        [FWHM, Penumbra] = BeamProfile (c);
+        % Show BeamProfile
+        hTextBox3.String = sprintf('FWHM: %.2f\nPenumbra: %.2f', FWHM, Penumbra);
+
+    end
+
+   function inputEnergyCallback(~,~)
+        E0 = inputdlg('Enter initial energy [MeV]:');
+        E0 = str2double(E0{1});
+        z = inputdlg('Enter air gap [cm]:');
+        z = str2double(z{1});
+        filmType = hFilmType.Value; % Get film type from UI
+        RE = EficienciaRelativa(E0,z,filmType);
+        hTextBox2.String = ['Eficiencia relativa: ', num2str(RE)];   
+   end
+
+    function applyRECallback(~,~)
+    % Check if D (Dose matrix) and RE (Relative Efficiency) are available
+    if isempty(D) || isempty(RE)
+        return;
+    end
+
+    % Multiply dose by RE
+    D_subregion = D_subregion / RE;
+
+    % Update dose map
+    % imshow(D_subregion, 'Parent', hAxes2);
+    pixelSize = 0.01693;  % Pixel size in cm
+    imagesc(D_subregion,'Parent',hAxes2, 'XData', [-size(D_subregion,2)*pixelSize size(D_subregion,2)*pixelSize], 'YData', [-size(D_subregion,1)*pixelSize size(D_subregion,1)*pixelSize]); 
+    hAxes2.XLabel.String = 'cm'; 
+    hAxes2.YLabel.String = 'cm'; 
+    hcolorbar = colorbar('peer',hAxes2);
+    hcolorbar.Label.String = 'Gy'; 
+
+    % Update histogram
+    histogram(hAxes3,D_subregion(:),100);
+    title(hAxes3,'Histogram');
+    xlabel(hAxes3,'Dose [Gy]');
+    ylabel(hAxes3,'Frequency');
+
+    % Update statistics
+    minDose = min(D_subregion(:));
+    maxDose = max(D_subregion(:));
+    meanDose = mean(D_subregion(:));
+    medianDose = median(D_subregion(:));
+    stdDose = std(D_subregion(:));
+    hTextBox.String = sprintf('Min: %.2f Gy\nMax: %.2f Gy\nMean: %.2f Gy\nMedian: %.2f Gy\nStd: %.2f Gy',minDose,maxDose,meanDose,medianDose,stdDose);
+    drawnow;
+    end
 
     function calcAndDispCallback(~,~)
         % Calculate dose
         method = hMethod.String{hMethod.Value};
         [pixCM, maxBits] = getImgMetaInfo(imPath);
-       scriptPath = [];
+        scriptPath = [];
         dataFilePath = []; 
         dataFilePath3 = []; 
         CoefB1_noHDR = []; 
@@ -117,6 +228,7 @@ maxBits = [];
             if isempty(I0)
                 [file,path] = uigetfile('*.tif');
                 if ~isequal(file,0)
+                    axes(hAxes1b)
                     I0 = imread(fullfile(path,file));
                     I0 = imcrop(I0);  % Allow cropping of reference image
                     imshow(I0, 'Parent', hAxes1b); %
@@ -126,26 +238,38 @@ maxBits = [];
         end
         
         
+       if isempty(D)
+            return;
+        end
+        % Get current figure handle
+        figureHandle = gcf;
+        % Set current axes to hAxes2
+        axes(hAxes2);
+        % Now call imcrop
+        D_subregion = imcrop(D);
+        % Restore previous current figure
+        figure(figureHandle);
+
         % Convert axis from pixels to cm
         pixelSize = 0.01693;  % Pixel size in cm
-        imagesc(D,'Parent',hAxes2, 'XData', [0 size(D,2)*pixelSize], 'YData', [0 size(D,1)*pixelSize]); 
+        imagesc(D_subregion,'Parent',hAxes2, 'XData', [-size(D_subregion,2)*pixelSize size(D_subregion,2)*pixelSize], 'YData', [-size(D_subregion,1)*pixelSize size(D_subregion,1)*pixelSize]); 
         hAxes2.XLabel.String = 'cm'; 
         hAxes2.YLabel.String = 'cm'; 
         hcolorbar = colorbar('peer',hAxes2);
         hcolorbar.Label.String = 'Gy'; 
 
         % Display Histogram
-        histogram(hAxes3,D(:),100);
+        histogram(hAxes3,D_subregion(:),100);
         title(hAxes3,'Histogram');
         xlabel(hAxes3,'Dose [Gy]');
         ylabel(hAxes3,'Frequency');
 
         % Show Statistics
-        minDose = min(D(:));
-        maxDose = max(D(:));
-        meanDose = mean(D(:));
-        medianDose = median(D(:));
-        stdDose = std(D(:));
+        minDose = min(D_subregion(:));
+        maxDose = max(D_subregion(:));
+        meanDose = mean(D_subregion(:));
+        medianDose = median(D_subregion(:));
+        stdDose = std(D_subregion(:));
         hTextBox.String = sprintf('Min: %.2f\nMax: %.2f\nMean: %.2f\nMedian: %.2f\nStd: %.2f',minDose,maxDose,meanDose,medianDose,stdDose);
     end
     
