@@ -66,7 +66,7 @@ hLineProfile = uicontrol('Style','pushbutton','String','Draw & Plot Line Profile
                   'Callback',@lineProfileCallback);
 
 % Define global variables
-global imPath I I0 D dD maxBits E0 z filmType RE D_subregion
+global imPath I I0 D dD maxBits E0 z filmType RE D_subregion RCCalCoefs RCCalCoefs3
 
 imPath = '';
 I = [];
@@ -111,28 +111,7 @@ D_subregion = [];
         if isempty(D)
             return;
         end
-        axes(hAxes1)
-        h = imline(gca);
-        pos = getPosition(h);
-        c = improfile(D, pos(:,1), pos(:,2));
-        plot(hAxes4, c);
-        title(hAxes4, 'Line Profile');
-        xlabel(hAxes4, 'Position');
-        ylabel(hAxes4, 'Dose [Gy]');
-  
-        figure;
-%         l = sqrt((pos(2,2)-pos(1,2))^2+(pos(2,1)-pos(1,1))^2);
-%         xx = [-l/2 l/2];
-        plot(c);
-        title('Line Profile');
-        xlabel('Position');
-        ylabel('Dose [Gy]');
-        grid on;
-
-        [FWHM, Penumbra] = BeamProfile (c);
-        % Show BeamProfile
-        hTextBox3.String = sprintf('FWHM: %.2f\nPenumbra: %.2f', FWHM, Penumbra);
-
+        
     end
 
    function inputEnergyCallback(~,~)
@@ -152,29 +131,29 @@ D_subregion = [];
     end
 
     % Multiply dose by RE
-    D_subregion = D_subregion / RE;
+    D = D/ RE;
 
     % Update dose map
     % imshow(D_subregion, 'Parent', hAxes2);
     pixelSize = 0.01693;  % Pixel size in cm
-    imagesc(D_subregion,'Parent',hAxes2, 'XData', [-size(D_subregion,2)*pixelSize size(D_subregion,2)*pixelSize], 'YData', [-size(D_subregion,1)*pixelSize size(D_subregion,1)*pixelSize]); 
+    imagesc(D,'Parent',hAxes2, 'XData', [-size(D,2)*pixelSize size(D,2)*pixelSize], 'YData', [-size(D,1)*pixelSize size(D,1)*pixelSize]); 
     hAxes2.XLabel.String = 'cm'; 
     hAxes2.YLabel.String = 'cm'; 
     hcolorbar = colorbar('peer',hAxes2);
     hcolorbar.Label.String = 'Gy'; 
 
     % Update histogram
-    histogram(hAxes3,D_subregion(:),100);
+    histogram(hAxes3,D(:),100);
     title(hAxes3,'Histogram');
     xlabel(hAxes3,'Dose [Gy]');
     ylabel(hAxes3,'Frequency');
 
     % Update statistics
-    minDose = min(D_subregion(:));
-    maxDose = max(D_subregion(:));
-    meanDose = mean(D_subregion(:));
-    medianDose = median(D_subregion(:));
-    stdDose = std(D_subregion(:));
+    minDose = min(D(:));
+    maxDose = max(D(:));
+    meanDose = mean(D(:));
+    medianDose = median(D(:));
+    stdDose = std(D(:));
     hTextBox.String = sprintf('Min: %.2f Gy\nMax: %.2f Gy\nMean: %.2f Gy\nMedian: %.2f Gy\nStd: %.2f Gy',minDose,maxDose,meanDose,medianDose,stdDose);
     drawnow;
     end
@@ -240,36 +219,37 @@ D_subregion = [];
         
        if isempty(D)
             return;
-        end
-        % Get current figure handle
-        figureHandle = gcf;
-        % Set current axes to hAxes2
-        axes(hAxes2);
-        % Now call imcrop
-        D_subregion = imcrop(D);
-        % Restore previous current figure
-        figure(figureHandle);
+       end
+
+%         % Get current figure handle
+%         figureHandle = gcf;
+%         % Set current axes to hAxes2
+%         axes(hAxes2);
+%         % Now call imcrop
+%         D_subregion = imcrop(D);
+%         % Restore previous current figure
+%         figure(figureHandle);
 
         % Convert axis from pixels to cm
         pixelSize = 0.01693;  % Pixel size in cm
-        imagesc(D_subregion,'Parent',hAxes2, 'XData', [-size(D_subregion,2)*pixelSize size(D_subregion,2)*pixelSize], 'YData', [-size(D_subregion,1)*pixelSize size(D_subregion,1)*pixelSize]); 
+        imagesc(D,'Parent',hAxes2, 'XData', [-size(D,2)*pixelSize size(D,2)*pixelSize], 'YData', [-size(D,1)*pixelSize size(D,1)*pixelSize]); 
         hAxes2.XLabel.String = 'cm'; 
         hAxes2.YLabel.String = 'cm'; 
         hcolorbar = colorbar('peer',hAxes2);
         hcolorbar.Label.String = 'Gy'; 
 
         % Display Histogram
-        histogram(hAxes3,D_subregion(:),100);
+        histogram(hAxes3,D(:),100);
         title(hAxes3,'Histogram');
         xlabel(hAxes3,'Dose [Gy]');
         ylabel(hAxes3,'Frequency');
 
         % Show Statistics
-        minDose = min(D_subregion(:));
-        maxDose = max(D_subregion(:));
-        meanDose = mean(D_subregion(:));
-        medianDose = median(D_subregion(:));
-        stdDose = std(D_subregion(:));
+        minDose = min(D(:));
+        maxDose = max(D(:));
+        meanDose = mean(D(:));
+        medianDose = median(D(:));
+        stdDose = std(D(:));
         hTextBox.String = sprintf('Min: %.2f\nMax: %.2f\nMean: %.2f\nMedian: %.2f\nStd: %.2f',minDose,maxDose,meanDose,medianDose,stdDose);
     end
     
