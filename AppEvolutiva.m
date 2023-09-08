@@ -371,8 +371,8 @@ classdef AppEvolutiva < matlab.apps.AppBase
             % Create UIAxes
             app.UIAxes = uiaxes(app.UIFigure);
             title(app.UIAxes, 'Problem Image')
-            xlabel(app.UIAxes, 'X')
-            ylabel(app.UIAxes, 'Y')
+            xlabel(app.UIAxes, 'cm')
+            ylabel(app.UIAxes, 'cm')
             zlabel(app.UIAxes, 'Z')
             app.UIAxes.Position = [406 552 224 208];
 
@@ -380,24 +380,24 @@ classdef AppEvolutiva < matlab.apps.AppBase
             % Create UIAxes2
             app.UIAxes2 = uiaxes(app.UIFigure);
             title(app.UIAxes2, 'Dose Map ')
-            xlabel(app.UIAxes2, 'X')
-            ylabel(app.UIAxes2, 'Y')
+            xlabel(app.UIAxes2, 'cm')
+            ylabel(app.UIAxes2, 'cm')
             zlabel(app.UIAxes2, 'Z')
             app.UIAxes2.Position = [881 519 336 289];
 
             % Create UIAxes3
             app.UIAxes3 = uiaxes(app.UIFigure);
             title(app.UIAxes3, 'Histogram')
-            xlabel(app.UIAxes3, 'X')
-            ylabel(app.UIAxes3, 'Y')
+            xlabel(app.UIAxes3, 'Dose [Gy]')
+            ylabel(app.UIAxes3, 'Frequency')
             zlabel(app.UIAxes3, 'Z')
             app.UIAxes3.Position = [406 180 272 229];
 
             % Create UIAxes4
             app.UIAxes4 = uiaxes(app.UIFigure);
             title(app.UIAxes4, 'Dose Profile')
-            xlabel(app.UIAxes4, 'X')
-            ylabel(app.UIAxes4, 'Y')
+            xlabel(app.UIAxes4, 'Position')
+            ylabel(app.UIAxes4, 'Dose [Gy]')
             zlabel(app.UIAxes4, 'Z')
             app.UIAxes4.Position = [917 180 281 229];
 
