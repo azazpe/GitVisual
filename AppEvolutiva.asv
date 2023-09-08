@@ -11,6 +11,7 @@ classdef AppEvolutiva < matlab.apps.AppBase
         RE;
         c;
         selectedCalculationMethod = 'Pixel Value';  % Valor predeterminado
+        UIAxes5                        matlab.ui.control.UIAxes
         Label4                         matlab.ui.control.Label
         CalREButton                    matlab.ui.control.Button
         RETextArea                     matlab.ui.control.TextArea
@@ -62,14 +63,33 @@ classdef AppEvolutiva < matlab.apps.AppBase
     % Callbacks that handle component events
     methods (Access = private)
 
-        % Button pushed function: LoadProblemImageButton
+%         % Button pushed function: LoadProblemImageButton
+%         function LoadProblemImageButtonPushed(app, event)
+%             
+%             [file,path] = uigetfile('*.tif');
+%         if ~isequal(file,0)
+%             app.imPath = fullfile(path,file);
+%             app.I_orig = imread(app.imPath);
+%             imshow(app.I_orig, 'Parent', app.UIAxes);        
+%         end
+%         end
+
         function LoadProblemImageButtonPushed(app, event)
-            
-            [file,path] = uigetfile('*.tif');
+        [file, path] = uigetfile('*.tif');
         if ~isequal(file,0)
-            app.imPath = fullfile(path,file);
-            app.I_orig = imread(app.imPath);
-            imshow(app.I_orig, 'Parent', app.UIAxes);        
+        app.imPath = fullfile(path, file);
+        app.I_orig = imread(app.imPath);
+        
+        % Convert axis from pixels to cm
+        pixelSize = 0.01693;   % Pixel size in cm
+        xExtent = [-size(app.I_orig,2)*pixelSize/2, size(app.I_orig,2)*pixelSize/2];
+        yExtent = [-size(app.I_orig,1)*pixelSize/2, size(app.I_orig,1)*pixelSize/2];
+        
+        imagesc(app.I_orig, 'Parent', app.UIAxes, 'XData', xExtent, 'YData', yExtent);
+        
+        % Updating the axis labels
+        app.UIAxes.XLabel.String = 'cm';
+        app.UIAxes.YLabel.String = 'cm';
         end
         end
 
@@ -86,29 +106,68 @@ classdef AppEvolutiva < matlab.apps.AppBase
         function CropImageButtonPushed(app, event)
         % Now call imcrop
         app.I = imcrop(app.UIAxes);
-        imshow(app.I, 'Parent', app.UIAxes);
+%         imshow(app.I, 'Parent', app.UIAxes);
+        % Convert axis from pixels to cm
+        pixelSize = 0.01693;
+        xExtent = [-size(app.I,2)*pixelSize/2, size(app.I,2)*pixelSize/2];
+        yExtent = [-size(app.I,1)*pixelSize/2, size(app.I,1)*pixelSize/2];
+        
+        imagesc(app.I, 'Parent', app.UIAxes, 'XData', xExtent, 'YData', yExtent);
+        
+         % Updating the axis labels
+         app.UIAxes.XLabel.String = 'cm';
+         app.UIAxes.YLabel.String = 'cm';
         end
 
         % Button pushed function: UncropButton
         function UncropButtonPushed(app, event)
         % Show the original image stored in the property
-        imshow(app.I_orig, 'Parent', app.UIAxes);
+        pixelSize = 0.01693;   % Pixel size in cm
+        xExtent = [-size(app.I_orig,2)*pixelSize/2, size(app.I_orig,2)*pixelSize/2];
+        yExtent = [-size(app.I_orig,1)*pixelSize/2, size(app.I_orig,1)*pixelSize/2];
+        
+        imagesc(app.I_orig, 'Parent', app.UIAxes, 'XData', xExtent, 'YData', yExtent);
+        end
+
+        % Button pushed function: LoadRefImageButton
+        function LoadRefImageButtonPushed(app, event)
+             [file,path] = uigetfile('*.tif');
+            if ~isequal(file,0)
+            app.imPath2 = fullfile(path,file);
+            app.I0 = imread(app.imPath2);
+        % Convert axis from pixels to cm
+        pixelSize = 0.01693;
+        xExtent = [-size(app.I0,2)*pixelSize/2, size(app.I0,2)*pixelSize/2];
+        yExtent = [-size(app.I0,1)*pixelSize/2, size(app.I0,1)*pixelSize/2];
+        
+        imagesc(app.I0, 'Parent', app.UIAxes5, 'XData', xExtent, 'YData', yExtent);
+        app.I0 = imcrop(app.UIAxes5);
+        xExtent = [-size(app.I0,2)*pixelSize/2, size(app.I0,2)*pixelSize/2];
+        yExtent = [-size(app.I0,1)*pixelSize/2, size(app.I0,1)*pixelSize/2];
+        imagesc(app.I0, 'Parent', app.UIAxes5, 'XData', xExtent, 'YData', yExtent);
+
+            end
+        end
+
+        % Button pushed function: ResetImageButton_2
+        function ResetImageButton_2Pushed(app, event)
+        % Reset the reference image property
+        % Clear the UIAxes content
+         cla(app.UIAxes5, 'reset');
+         app.I0 = [];
         end
 
          % Value changed function: pvButton
         function pvButtonValueChanged(app, event)
             app.selectedCalculationMethod = 'Pixel Value';
-            
         end
 
         % Value changed function: netODButton_3
         function netODButton_3ValueChanged(app, event)
             app.selectedCalculationMethod = 'netOD';
-            
         end
 
         function CalculateButtonPushed(app, event)
-
         [pixCM, maxBits] = getImgMetaInfo(app.imPath);
         scriptPath = [];
         dataFilePath = []; 
@@ -148,13 +207,14 @@ classdef AppEvolutiva < matlab.apps.AppBase
         loadRCCoefs
               if strcmp(app.selectedCalculationMethod, 'Pixel Value')
               
+              app.I = app.I - mean(app.I0(:));  %% A ver que pasa?
               [app.D, dD] = getDoseT1_I(app.I, maxBits);
-              app.Label3.Text = sprintf("Está utilizando la calibración Pixel Value");
+              app.Label3.Text = sprintf("You are using Pixel Value calibration");
 
               else 
               
               [app.D, dD] = getDoseT3_I(app.I, app.I0, maxBits);
-              app.Label3.Text = sprintf("Está utilizando la calibración netOD");
+              app.Label3.Text = sprintf("You are using netOD calibration");
               end
         
 
@@ -187,7 +247,7 @@ classdef AppEvolutiva < matlab.apps.AppBase
      function CalButtonPushed(app, event)
     % Mostrar un mensaje 
     %uialert(app.UIFigure, 'Dibuja una línea en la imagen para obtener el perfil de dosis.', 'Perfil');
-    t = msgbox('Dibuja una línea en la Imagen Problema para obtener el perfil de dosis. Doble click en la linea dibujada.', 'Perfil', 'help');
+    t = msgbox('Draw a line on the Problem Image to obtain the dose profile. Double click on the drawn line.', 'Profile', 'help');
     pause(3.5);
     delete(t);
     
@@ -245,6 +305,8 @@ classdef AppEvolutiva < matlab.apps.AppBase
             app.D = app.D/ app.RE;
             app.c = app.c/ app.RE;
 
+            app.Label4.Text = sprintf('You are using a Relative Efficiency of %.2f',app.RE);
+
         % Convert axis from pixels to cm
         pixelSize = 0.01693;   % Pixel size in cm
         imagesc(app.D,'Parent',app.UIAxes2, 'XData', [-size(app.D,2)*pixelSize size(app.D,2)*pixelSize], 'YData', [-size(app.D,1)*pixelSize size(app.D,1)*pixelSize]); 
@@ -277,30 +339,7 @@ classdef AppEvolutiva < matlab.apps.AppBase
          %app.Label3.Text = sprintf("Está utilizando la calibración %.2f y utilizando un RE de %.2f.", app.selectedCalculationMethod, app.RE);
         end
 
-        % Button pushed function: LoadRefImageButton
-        function LoadRefImageButtonPushed(app, event)
-            
-             [file,path] = uigetfile('*.tif');
-            if ~isequal(file,0)
-            app.imPath2 = fullfile(path,file);
-            app.I0 = imread(app.imPath2);
-            figure(1)
-            imshow(app.I0);  
-            app.I0 = imcrop(gca);
-            imshow(app.I0);
-            % Muestra el mensaje después de realizar el recorte
-            h = msgbox("Se ha establecido imagen de referencia", "Imagen de Referencia");
-            pause(1.5);
-            delete(h);
-            end
-        end
-
-        % Button pushed function: ResetImageButton_2
-        function ResetImageButton_2Pushed(app, event)
-        % Reset the reference image property
-         app.I0 = [];
-         msgbox("Se ha reseteado la imagen de referencia, vuelva a cargarla", "Imagen de Referencia");
-        end
+        
 
     end
 
@@ -321,7 +360,8 @@ classdef AppEvolutiva < matlab.apps.AppBase
             xlabel(app.UIAxes, 'X')
             ylabel(app.UIAxes, 'Y')
             zlabel(app.UIAxes, 'Z')
-            app.UIAxes.Position = [406 519 325 289];
+            app.UIAxes.Position = [406 552 224 208];
+
 
             % Create UIAxes2
             app.UIAxes2 = uiaxes(app.UIFigure);
@@ -520,18 +560,19 @@ classdef AppEvolutiva < matlab.apps.AppBase
             % Create Image
             app.Image = uiimage(app.UIFigure);
             app.Image.Position = [29 726 291 109];
+            app.Image.ImageSource = fullfile('LOGO FN.png');
 
             % Create Label3
             app.Label3 = uilabel(app.UIFigure);
             app.Label3.HorizontalAlignment = 'center';
-            app.Label3.Position = [533 75 481 69];
-            app.Label3.Text = 'Label3';
+            app.Label3.Position = [524 92 481 69];
+            app.Label3.Text = '';
 
             % Create Label4
             app.Label4 = uilabel(app.UIFigure);
             app.Label4.HorizontalAlignment = 'center';
-            app.Label4.Position = [524 1 481 83];
-            app.Label4.Text = 'Label4';
+            app.Label4.Position = [524 52 481 83];
+            app.Label4.Text = '';
 
             % Create TextAreaLabel
             app.StadisticsLabel = uilabel(app.UIFigure);
@@ -559,6 +600,13 @@ classdef AppEvolutiva < matlab.apps.AppBase
             app.RETextArea = uitextarea(app.RelativeEfficiencyREPanel);
             app.RETextArea.Position = [68 20 66 31];
             
+            % Create UIAxes5
+            app.UIAxes5 = uiaxes(app.UIFigure);
+            title(app.UIAxes5, 'Reference Image')
+            xlabel(app.UIAxes5, 'X')
+            ylabel(app.UIAxes5, 'Y')
+            zlabel(app.UIAxes5, 'Z')
+            app.UIAxes5.Position = [629 551 221 209];
 
 
             % Show the figure after all components are created
