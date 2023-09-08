@@ -228,7 +228,7 @@ classdef AppEvolutiva < matlab.apps.AppBase
 
         % Convert axis from pixels to cm
         pixelSize = 0.01693;   % Pixel size in cm
-        imagesc(app.D,'Parent',app.UIAxes2, 'XData', [-size(app.D,2)*pixelSize/2 size(app.D,2)*pixelSize/2], 'YData', [-size(app.D,1)*pixelSize/2 size(app.D,1)*pixelSize/2]); 
+        imagesc(app.D,'Parent',app.UIAxes2, 'XData', [-size(app.D,2)*pixelSize size(app.D,2)*pixelSize], 'YData', [-size(app.D,1)*pixelSize size(app.D,1)*pixelSize]); 
         app.UIAxes2.XLabel.String = 'cm'; 
         app.UIAxes2.YLabel.String = 'cm'; 
         hcolorbar = colorbar('peer',app.UIAxes2);
@@ -323,7 +323,7 @@ classdef AppEvolutiva < matlab.apps.AppBase
 
         % Convert axis from pixels to cm
         pixelSize = 0.01693;   % Pixel size in cm
-        imagesc(app.D,'Parent',app.UIAxes2, 'XData', [-size(app.D,2)*pixelSize/2 size(app.D,2)*pixelSize/2], 'YData', [-size(app.D,1)*pixelSize/2 size(app.D,1)*pixelSize/2]);
+        imagesc(app.D,'Parent',app.UIAxes2, 'XData', [-size(app.D,2)*pixelSize size(app.D,2)*pixelSize], 'YData', [-size(app.D,1)*pixelSize size(app.D,1)*pixelSize]); 
         app.UIAxes2.XLabel.String = 'cm'; 
         app.UIAxes2.YLabel.String = 'cm'; 
         hcolorbar = colorbar('peer',app.UIAxes2);
